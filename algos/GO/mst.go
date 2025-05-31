@@ -1,27 +1,30 @@
 package algos
 
 import (
+	"container/heap"
 	"math/bits"
 	"sort"
 )
 
-type Edge[V number, W number] struct {
+// =========== MST ============
+type Edge[V integer, W integer] struct {
 	From   V
 	To     V
 	Weight W
 }
 
-type MST[T number, W number] interface {
+type MST[V integer, W integer] interface {
 	// AddEdge adds an edge to the MST algorithm.
-	AddEdge(from, to T, weight W)
+	AddEdge(from, to V, weight W)
 
 	// GetMST returns the edges in the minimum spanning tree.
-	GetMST() []Edge[T, W]
+	GetMST() []Edge[V, W]
 }
 
-type Kruskal[V number, W number] struct {
+type Kruskal[V integer, W integer] struct {
 	edges []Edge[V, W]
-	uf    *UnionFind[V]
+	uf    *UF[V]
+	V_cnt int
 }
 func (k *Kruskal[V, W]) AddEdge(from, to V, weight W) {
 	k.edges = append(k.edges, Edge[V, W]{From: from, To: to, Weight: weight})
@@ -40,19 +43,23 @@ func (k *Kruskal[V, W]) GetMST() []Edge[V, W] {
 		if k.uf.Find(edge.From) != k.uf.Find(edge.To) {
 			k.uf.Union(edge.From, edge.To)
 			mst = append(mst, edge)
+			if len(mst) == k.V_cnt-1 {
+				break
+			}
 		}
 	}
 	return mst
 }
-func NewKruskal[V number, W number](vertices []V) *Kruskal[V, W] {
-	uf := NewUnionFind[V](vertices)
+func NewKruskal[V integer, W integer](vertices []V) *Kruskal[V, W] {
+	uf := NewUF[V](vertices)
 	return &Kruskal[V, W]{
 		edges: []Edge[V, W]{},
 		uf:    uf,
+		V_cnt: len(vertices),
 	}
 }
 
-type Prim[V number, W number] struct {
+type Prim[V integer, W integer] struct {
 	adjacency map[V]map[V]W // adjacency list with weights
 	visited   map[V]bool
 	minHeap   *Heap[Edge[V, W]]
@@ -105,12 +112,13 @@ func (p *Prim[V, W]) GetMST() []Edge[V, W] {
 	}
 	return mst
 }
-func NewPrim[V number, W number]() *Prim[V, W] {
+func NewPrim[V integer, W integer]() *Prim[V, W] {
 	mh := &Heap[Edge[V, W]]{
 		less: func(a, b Edge[V, W]) bool {
 			return a.Weight < b.Weight
 		},
 	}
+	heap.Init(mh)
 
 	return &Prim[V, W]{
 		adjacency: make(map[V]map[V]W),
@@ -118,19 +126,18 @@ func NewPrim[V number, W number]() *Prim[V, W] {
 		minHeap:   mh,
 	}
 }
-
 // NewMST creates a new MST instance based on v, e counts
-func NewMST[V number, W number](v_cnt, e_cnt uint) MST[V, W] {
+func NewMST[V integer, W integer](v_cnt, e_cnt uint) MST[V, W] {
 	v_log_floor := bits.Len(v_cnt) - 1
 	if e_cnt > v_cnt*uint(v_log_floor) {
 		// dense graph
 		return NewPrim[V, W]()
 	} else {
 		// sparse graph
-		vertices := make([]V, 0, v_cnt)
-		for i := uint(0); i < v_cnt; i++ {
-			var vertex V
-			vertices = append(vertices, vertex)
+		end := V(v_cnt)
+		vertices := make([]V, v_cnt)
+		for i := V(0); i < end; i++ {
+			vertices[i] = i
 		}
 		return NewKruskal[V, W](vertices)
 	}
