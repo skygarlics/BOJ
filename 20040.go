@@ -7,7 +7,6 @@ import (
 )
 
 // ============ io =============
-
 var (
 	reader = bufio.NewReaderSize(os.Stdin, 1<<20)
 	writer = bufio.NewWriter(os.Stdout)
@@ -52,58 +51,36 @@ func scanInt() int {
 func print(a ...any) { fmt.Fprint(writer, a...) }
 func println(a ...any) { fmt.Fprintln(writer, a...) }
 
-// ============ Union-Find ============
-type GenericUnionFind[T comparable] struct {
-	val2id map[T] int
-	id2val []T
+// ============= sized uf ============
+type SizedUF struct {
 	parent []int
 	rank   []int
 	size   []int
 }
 
-func NewGenericUF[T comparable](elements []T) *GenericUnionFind[T] {
-	uf := &GenericUnionFind[T]{
-		val2id: make(map[T]int, len(elements)),
-		id2val: make([]T, len(elements)),
-		parent: make([]int, len(elements)),
-		rank:   make([]int, len(elements)),
-		size:   make([]int, len(elements)),
+func NewSizedUF(cnt int) *SizedUF {
+	uf := &SizedUF{
+		parent: make([]int, cnt),
+		rank:   make([]int, cnt),
+		size:   make([]int, cnt),
 	}
-	for idx, elem := range elements {
-		uf.val2id[elem] = idx
-		uf.id2val[idx] = elem
-		uf.parent[idx] = idx
-		uf.rank[idx] = 0
-		uf.size[idx] = 1
+	for elem := 0; elem < cnt; elem++ {
+		uf.parent[elem] = elem
+		uf.rank[elem] = 0
+		uf.size[elem] = 1
 	}
 	return uf
 }
-func (uf *GenericUnionFind[T]) FindRoot(id int) int {
-	if uf.parent[id] != id {
-		uf.parent[id] = uf.FindRoot(uf.parent[id])
+
+func (uf *SizedUF) Find(x int) int {
+	if uf.parent[x] != x {
+		uf.parent[x] = uf.Find(uf.parent[x])
 	}
-	return uf.parent[id]
+	return uf.parent[x]
 }
-
-func (uf *GenericUnionFind[T]) Find(x T) (T, error) {
-	id, exists := uf.val2id[x]
-	if !exists {
-		return x, fmt.Errorf("element not found: %v", x)
-	}
-	rootId := uf.FindRoot(id)
-	return uf.id2val[rootId], nil
-}
-
-func (uf *GenericUnionFind[T]) Union(x, y T) error {
-	idX, existsX := uf.val2id[x]
-	idY, existsY := uf.val2id[y]
-	if !existsX || !existsY {
-		return fmt.Errorf("one or both elements not found: %v, %v", x, y)
-	}
-
-	rootX := uf.FindRoot(idX)
-	rootY := uf.FindRoot(idY)
-
+func (uf *SizedUF) Union(x, y int) error {
+	rootX := uf.Find(x)
+	rootY := uf.Find(y)
 	if rootX != rootY {
 		if uf.rank[rootX] < uf.rank[rootY] {
 			uf.parent[rootX] = rootY
@@ -118,43 +95,95 @@ func (uf *GenericUnionFind[T]) Union(x, y T) error {
 		}
 		return nil
 	}
-	return fmt.Errorf("elements are already in the same set: %v, %v", x, y)
+	return fmt.Errorf("elements %d and %d are already in the same set", x, y)
 }
-
-func (uf *GenericUnionFind[T]) Roots() []T {
-	roots := make([]T, 0)
+func (uf *SizedUF) Roots() []int {
+	roots := make([]int, 0)
 	for id := 0; id < len(uf.parent); id++ {
-		parent := uf.FindRoot(id)
+		parent := uf.Find(id)
 		if parent == id {
-			roots = append(roots, uf.id2val[id])
+			roots = append(roots, id)
 		}
 	}
 	return roots
 }
-
-func (uf *GenericUnionFind[T]) GetRootCount() int {
+func (uf *SizedUF) GetRootCount() int {
 	roots := uf.Roots()
 	return len(roots)
 }
+func (uf *SizedUF) GetSize(x int) int {
+	root := uf.Find(x)
+	if root < 0 || root >= len(uf.size) {
+		return 0
+	}
+	return uf.size[root]
+}
 
-func (uf *GenericUnionFind[T]) GetSize(x T) (int, error) {
+// ============= generic uf ============
+type UnionFind interface {
+	Find(x int) int
+	Union(x, y int) error
+	Roots() []int
+	GetRootCount() int
+	GetSize(x int) int
+}
+
+type GenericUF[T comparable] struct {
+	id2val map[int]T
+	val2id map[T]int
+	internal UnionFind
+}
+func NewGenericUF[T comparable](elements []T, impl UnionFind) *GenericUF[T] {
+	uf := &GenericUF[T]{
+		id2val: make(map[int]T, len(elements)),
+		val2id: make(map[T]int, len(elements)),
+		internal: impl,
+	}
+	for idx, elem := range elements {
+		uf.val2id[elem] = idx
+		uf.id2val[idx] = elem
+	}
+	return uf
+}
+func (uf *GenericUF[T]) Find(x T) (T, error) {
+	id, exists := uf.val2id[x]
+	if !exists {
+		return x, fmt.Errorf("element not found: %v", x)
+	}
+	rootId := uf.internal.Find(id)
+	return uf.id2val[rootId], nil
+}
+func (uf *GenericUF[T]) Union(x, y T) error {
+	idX, existsX := uf.val2id[x]
+	idY, existsY := uf.val2id[y]
+	if !existsX || !existsY {
+		return fmt.Errorf("one or both elements not found: %v, %v", x, y)
+	}
+	err := uf.internal.Union(idX, idY)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (uf *GenericUF[T]) Roots() []T {
+	roots := uf.internal.Roots()
+	result := make([]T, len(roots))
+	for i, root := range roots {
+		result[i] = uf.id2val[root]
+	}
+	return result
+}
+func (uf *GenericUF[T]) GetRootCount() int {
+	roots := uf.internal.Roots()
+	return len(roots)
+}
+func (uf *GenericUF[T]) GetSize(x T) (int, error) {
 	id, exists := uf.val2id[x]
 	if !exists {
 		return 0, fmt.Errorf("element not found: %v", x)
 	}
-	rootId := uf.FindRoot(id)
-	return uf.size[rootId], nil
-}
-func (uf *GenericUnionFind[T]) Add(x T) {
-	if _, exists := uf.val2id[x]; exists {
-		return // Element already exists
-	}
-	id := len(uf.id2val)
-	uf.val2id[x] = id
-	uf.id2val = append(uf.id2val, x)
-	uf.parent = append(uf.parent, id)
-	uf.rank = append(uf.rank, 0)
-	uf.size = append(uf.size, 1)
+	size := uf.internal.GetSize(id)
+	return size, nil
 }
 
 func main() {
@@ -165,7 +194,8 @@ func main() {
 	for i := 0; i < N; i++ {
 		arr[i] = i
 	}
-	uf := NewGenericUF(arr)
+	impl := NewSizedUF(N)
+	uf := NewGenericUF(arr, impl)
 
 	for cnt := 1; cnt <= M; cnt++ {
 		a, b := scanInt(), scanInt()

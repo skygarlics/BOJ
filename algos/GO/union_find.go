@@ -64,16 +64,22 @@ func (uf *UF) GetSize(x int) int {
 	}
 	return size
 }
+func (uf *UF) AddElement() int {
+	newId := len(uf.parent)
+	uf.parent = append(uf.parent, newId)
+	uf.rank = append(uf.rank, 0)
+	return newId
+}
 
 // ============= sized uf ============
-type UFwSize struct {
+type SizedUF struct {
 	parent []int
 	rank   []int
 	size   []int
 }
 
-func NewSizedUF(cnt int) *UFwSize {
-	uf := &UFwSize{
+func NewSizedUF(cnt int) *SizedUF {
+	uf := &SizedUF{
 		parent: make([]int, cnt),
 		rank:   make([]int, cnt),
 		size:   make([]int, cnt),
@@ -86,13 +92,13 @@ func NewSizedUF(cnt int) *UFwSize {
 	return uf
 }
 
-func (uf *UFwSize) Find(x int) int {
+func (uf *SizedUF) Find(x int) int {
 	if uf.parent[x] != x {
 		uf.parent[x] = uf.Find(uf.parent[x])
 	}
 	return uf.parent[x]
 }
-func (uf *UFwSize) Union(x, y int) error {
+func (uf *SizedUF) Union(x, y int) error {
 	rootX := uf.Find(x)
 	rootY := uf.Find(y)
 	if rootX != rootY {
@@ -111,7 +117,7 @@ func (uf *UFwSize) Union(x, y int) error {
 	}
 	return fmt.Errorf("elements %d and %d are already in the same set", x, y)
 }
-func (uf *UFwSize) Roots() []int {
+func (uf *SizedUF) Roots() []int {
 	roots := make([]int, 0)
 	for id := 0; id < len(uf.parent); id++ {
 		parent := uf.Find(id)
@@ -121,16 +127,23 @@ func (uf *UFwSize) Roots() []int {
 	}
 	return roots
 }
-func (uf *UFwSize) GetRootCount() int {
+func (uf *SizedUF) GetRootCount() int {
 	roots := uf.Roots()
 	return len(roots)
 }
-func (uf *UFwSize) GetSize(x int) int {
+func (uf *SizedUF) GetSize(x int) int {
 	root := uf.Find(x)
 	if root < 0 || root >= len(uf.size) {
 		return 0
 	}
 	return uf.size[root]
+}
+func (uf *SizedUF) AddElement() int {
+	newId := len(uf.parent)
+	uf.parent = append(uf.parent, newId)
+	uf.rank = append(uf.rank, 0)
+	uf.size = append(uf.size, 1)
+	return newId
 }
 
 // ============= generic uf ============
@@ -140,6 +153,7 @@ type UnionFind interface {
 	Roots() []int
 	GetRootCount() int
 	GetSize(x int) int
+	AddElement() int
 }
 
 type GenericUF[T comparable] struct {
@@ -198,4 +212,10 @@ func (uf *GenericUF[T]) GetSize(x T) (int, error) {
 	}
 	size := uf.internal.GetSize(id)
 	return size, nil
+}
+func (uf *GenericUF[T]) AddElement(elem T) int {
+	newId := uf.internal.AddElement()
+	uf.id2val[newId] = elem
+	uf.val2id[elem] = newId
+	return newId
 }
