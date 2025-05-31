@@ -9,7 +9,7 @@ type unsigned interface {
 }
 
 type integer interface {
-	signed | unsigned
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
 }
 
 type float interface {
@@ -17,9 +17,5 @@ type float interface {
 }
 
 type number interface {
-	integer | float
-}
-type Heap[T any] struct {
-	data []T
-	less func(a, b T) bool
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~float32 | ~float64
 }

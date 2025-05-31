@@ -2,6 +2,10 @@ package algos
 
 import "container/heap"
 
+type Heap[T any] struct {
+	data []T
+	less func(a, b T) bool
+}
 func (h *Heap[T]) Len() int           { return len(h.data) }
 func (h *Heap[T]) Less(i, j int) bool { return h.less(h.data[i], h.data[j]) }
 func (h *Heap[T]) Swap(i, j int)      { h.data[i], h.data[j] = h.data[j], h.data[i] }
