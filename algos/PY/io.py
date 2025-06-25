@@ -9,3 +9,10 @@ it = iter(inputs)
 import sys;inputs=sys.stdin.read().split()
 it = iter(map(int, inputs))
 input = lambda: next(it)
+
+
+import os, io
+input = io.BytesIO(os.read(0, os.fstat(0).st_size)).readline
+
+import sys
+print = sys.stdout.write
