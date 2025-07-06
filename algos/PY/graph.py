@@ -57,3 +57,27 @@ class Graph:
         end = self.start[u + 1]
         for i in range(start, end):
             yield self.edges[i]
+
+
+class Graph:
+    def __init__(self, n):
+        self.n = n
+        self.edges = [[] for _ in range(n + 1)]
+        self.distances = [[float('inf')] * (n + 1) for _ in range(n + 1)]
+
+        for i in range(1, self.n + 1):
+            self.distances[i][i] = 0
+    
+    def add_edge(self, u, v, dist):
+        self.edges[u].append(v)
+        self.distances[u][v] = min(self.distances[u][v], dist)
+    
+    def floyd_warshall(self):
+        for k in range(1, self.n + 1):
+            for i in range(1, self.n + 1):
+                for j in range(1, self.n + 1):
+                    if self.distances[i][j] > self.distances[i][k] + self.distances[k][j]:
+                        self.distances[i][j] = self.distances[i][k] + self.distances[k][j]
+
+    def get_cost(self, u, v):
+        return self.distances[u][v] if self.distances[u][v] != float('inf') else 0
