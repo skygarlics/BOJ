@@ -79,5 +79,20 @@ class Graph:
                     if self.distances[i][j] > self.distances[i][k] + self.distances[k][j]:
                         self.distances[i][j] = self.distances[i][k] + self.distances[k][j]
 
+    def dijkstra(self, start):
+        import heapq
+        dist = [float('inf')] * (self.n + 1)
+        dist[start] = 0
+        pq = [(0, start)]
+        while pq:
+            d, u = heapq.heappop(pq)
+            if d > dist[u]:
+                continue
+            for v in self.edges[u]:
+                if dist[v] > dist[u] + self.distances[u][v]:
+                    dist[v] = dist[u] + self.distances[u][v]
+                    heapq.heappush(pq, (dist[v], v))
+        return dist
+
     def get_cost(self, u, v):
         return self.distances[u][v] if self.distances[u][v] != float('inf') else 0
