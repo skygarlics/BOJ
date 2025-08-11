@@ -55,7 +55,7 @@ class Dinic:
 
 from collections import deque
 import heapq
-class MCMF:
+class MCMF_BF:
     def __init__(self, N, cutoff, pathfunc=None):
         self.N = N
         self.graph = [[] for _ in range(N)]
@@ -163,6 +163,95 @@ class MCMF:
             if max_flow >= self.cutoff:
                 break
         return max_flow, min_cost
+    
+
+class MCMF_BF:
+    def __init__(self, N, cutoff, pathfunc=None):
+        self.N = N
+        self.graph = [[] for _ in range(N)]
+        self.cutoff = cutoff
+        self.cap = [[0] * N for _ in range(N)]
+        self.cost = [[0] * N for _ in range(N)]
+        
+        self.f = self.spfa
+
+    def add_edge(self, u, v, capacity, cost):
+        self.graph[u].append(v)
+        self.graph[v].append(u)
+        self.cap[u][v] += capacity
+        self.cost[u][v] = cost
+        self.cost[v][u] = -cost
+    
+    def spfa(self, s, t):
+        dist = [float('inf')] * self.N
+        parent = [-1] * self.N
+        in_queue = [False] * self.N
+        
+        dist[s] = 0
+        queue = deque([s])
+        in_queue[s] = True
+        
+        while queue:
+            u = queue.popleft()
+            in_queue[u] = False
+            
+            for v in self.graph[u]:
+                if self.cap[u][v] > 0 and dist[u] + self.cost[u][v] < dist[v]:
+                    dist[v] = dist[u] + self.cost[u][v]
+                    parent[v] = u
+                    if not in_queue[v]:
+                        queue.append(v)
+                        in_queue[v] = True
+        
+        return dist[t] != float('inf'), parent, dist
+    
+
+    def dfs(self, u, t, pushed, min_cost_dist):
+        if u == t:
+            return pushed
+        
+        if self.dfs_visited[u]:
+            return 0
+        self.dfs_visited[u] = True
+        
+        total_flow = 0
+        for v in self.graph[u]:
+            if (self.cap[u][v] > 0 and 
+                min_cost_dist[v] == min_cost_dist[u] + self.cost[u][v] and
+                pushed > total_flow):
+                
+                flow = self.dfs(v, t, 
+                                min(pushed - total_flow, self.cap[u][v]), 
+                                min_cost_dist)
+                if flow > 0:
+                    self.cap[u][v] -= flow
+                    self.cap[v][u] += flow
+                    total_flow += flow
+        
+        self.dfs_visited[u] = False
+        return total_flow
+
+    def mcmf(self, s, t):
+        max_flow = 0
+        min_cost = 0
+        while True:
+            has_path, parent, dist = self.spfa(s, t)
+            if not has_path:
+                break
+            
+            self.dfs_visited = [False] * self.N
+            
+            flow = self.dfs(s, t, float('inf'), dist)
+            if flow == 0:
+                break
+                
+            max_flow += flow
+            min_cost += flow * dist[t]
+            
+            if max_flow >= self.cutoff:
+                break
+        
+        return min_cost, max_flow
     
 
 from collections import deque

@@ -1,4 +1,4 @@
-class SegmentTree:
+class SegmentSumTree:
     """ Segment tree for range sum and lazy propagation """
     def __init__(self, n):
         self.n = n
@@ -61,3 +61,21 @@ class SegmentTree:
         left_sum = self.query(l, r, node * 2, node_start, mid)
         right_sum = self.query(l, r, node * 2 + 1, mid + 1, node_end)
         return left_sum + right_sum
+    
+
+class FenwickTree:
+    def __init__(self, size):
+        self.size = size
+        self.tree = [0] * (size + 1)
+    
+    def update(self, idx):
+        while idx <= self.size:
+            self.tree[idx] += 1
+            idx += idx & (-idx)
+    
+    def query(self, idx):
+        result = 0
+        while idx > 0:
+            result += self.tree[idx]
+            idx -= idx & (-idx)
+        return result
