@@ -59,40 +59,45 @@ class Graph:
             yield self.edges[i]
 
 
-class Graph:
+import heapq
+class Dijkstra:
     def __init__(self, n):
         self.n = n
-        self.edges = [[] for _ in range(n + 1)]
-        self.distances = [[float('inf')] * (n + 1) for _ in range(n + 1)]
+        self.edges = [[] for _ in range(n)]
 
-        for i in range(1, self.n + 1):
-            self.distances[i][i] = 0
-    
-    def add_edge(self, u, v, dist):
-        self.edges[u].append(v)
-        self.distances[u][v] = min(self.distances[u][v], dist)
-    
-    def floyd_warshall(self):
-        for k in range(1, self.n + 1):
-            for i in range(1, self.n + 1):
-                for j in range(1, self.n + 1):
-                    if self.distances[i][j] > self.distances[i][k] + self.distances[k][j]:
-                        self.distances[i][j] = self.distances[i][k] + self.distances[k][j]
+    def add_edge(self, u, v, cost):
+        self.edges[u].append((cost, v))
 
     def dijkstra(self, start):
-        import heapq
-        dist = [float('inf')] * (self.n + 1)
+        dist = [float('inf')] * self.n
         dist[start] = 0
         pq = [(0, start)]
+
         while pq:
-            d, u = heapq.heappop(pq)
-            if d > dist[u]:
+            cost, u = heapq.heappop(pq)
+            if cost > dist[u]:
                 continue
-            for v in self.edges[u]:
-                if dist[v] > dist[u] + self.distances[u][v]:
-                    dist[v] = dist[u] + self.distances[u][v]
+            
+            for edge_cost, v in self.edges[u]:
+                if dist[v] > dist[u] + edge_cost:
+                    dist[v] = dist[u] + edge_cost
                     heapq.heappush(pq, (dist[v], v))
         return dist
 
-    def get_cost(self, u, v):
-        return self.distances[u][v] if self.distances[u][v] != float('inf') else 0
+class FloydWarshall:
+    def __init__(self, n):
+        self.n = n
+        self.distances = [[float('inf')] * n for _ in range(n)]
+        for i in range(n):
+            self.distances[i][i] = 0
+
+    def add_edge(self, u, v, cost):
+        self.distances[u][v] = min(self.distances[u][v], cost)
+
+    def floyd_warshall(self):
+        for k in range(self.n):
+            for i in range(self.n):
+                for j in range(self.n):
+                    if self.distances[i][j] > self.distances[i][k] + self.distances[k][j]:
+                        self.distances[i][j] = self.distances[i][k] + self.distances[k][j]
+        return self.distances
